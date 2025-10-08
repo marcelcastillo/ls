@@ -1,18 +1,19 @@
 #include <sys/types.h>
 
-
+#include <err.h>
 #include <fts.h>
 #include <stdio.h>
 #include <stdint.h>
+#include <string.h>
 #include <stdlib.h>
 
 int
 main(int argc, char *argv[])
 {
 	FTS *ftsp;
-	FTSENT *ent;
-	FTSENT *child;
-
+	FTSENT *p;
+	FTSENT *child;	
+	int listdot = 0;
 
 	if (argc < 2){
 		fprintf(stderr, "usage: %s path....\n", argv[0]);
@@ -26,35 +27,38 @@ main(int argc, char *argv[])
 		exit(EXIT_FAILURE);
 	}
 	
-	/* Move to the first (root) node */
-	ent = fts_read(ftsp);
-	if (ent == NULL){
-		perror("fts_read");
-		fts_close(ftsp);
-		exit(EXIT_FAILURE);
-	}
 
-	// Make sure argument is a directory
-	if (ent->fts_info != FTS_D){
-		fprintf(stderr, "%s is not a directory\n", argv[1]);
-		fts_close(ftsp);
-		exit(EXIT_FAILURE);
-	}
-
-	// Get immediate children of this directory
-	child = fts_children(ftsp, 0);
-	if (child == NULL){
-		perror("fts_children");
-		fts_close(ftsp);
-		exit(EXIT_FAILURE);
-	}
-
-	// Print only the child names
-    for (FTSENT *p = child; p != NULL; p = p->fts_link) {
-        printf("%s\n", p->fts_name);
-    }
-
-
+	/* Traverse through the fts tree abstraction */
+	while ((p = fts_read(ftsp)) != NULL)
+		switch (p->fts_info){
+			case FTS_DC:
+				warnx("%s: directory causes a cycle", p->fts_name);
+				break;
+			case FTS_DNR:
+			case FTS_ERR:
+				warnx("%s: %s", p->fts_path, strerror(p->fts_errno));
+				exit(EXIT_FAILURE);
+				break;
+			case FTS_D:
+				if (p->fts_level != FTS_ROOTLEVEL &&
+					p->fts_name[0] == '.' && !listdot){
+					(void)fts_set(ftsp, p, FTS_SKIP);
+					break;
+				}
+				//Print directory header
+				printf("%s:\n", p->fts_path);
+				child = fts_children(ftsp, 0);
+				if (child == NULL){
+					warn("%s", p->fts_path);
+					continue;
+				}
+				/* Print children */
+				for (FTSENT *c = child; c != NULL; c = c->fts_link){
+					printf("	%s\n", c->fts_name);
+				}
+				fts_set(ftsp, p, FTS_SKIP);
+				break;
+		}
 	fts_close(ftsp);
 	exit(EXIT_SUCCESS);
 }
