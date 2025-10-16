@@ -1,6 +1,7 @@
 /* Marcel Castillo
  * CS 631 Adv. Prog. in Unix
  * I pledge my honor that I have abided by the Stevens Honor System
+ * Midterm Project - ls
  */
 
 #include <sys/types.h>
@@ -13,28 +14,32 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+#include "cmp.h"
+
 int
 main(int argc, char *argv[])
 {
-	FTS *ftsp;
-	FTSENT *p;
-	FTSENT *child;	
+	FTS		*ftsp;
+	FTSENT	*p;
+	FTSENT	*child;	
 	int ch;
 	int fts_options;
-	static char dot[] = ".";
-
-	int f_listdot = 	0;		/* */
-	int f_nosort = 		0;
+	int f_listdot = 	0;	
+	int f_sort = 		1;			// Sort by default
 	int f_recursive = 	0;
+	char ** fts_args;
+	char *default_argv[] = {".", '\0'};
+	int (*cmp)(const FTSENT **, const FTSENT **);
 
 	fts_options = FTS_PHYSICAL;		// Option bit-mask, start by not following symbolic links
+									
 	while ((ch = getopt(argc, argv, "-AacdFfhiklnqRrSstuw")) != -1){
 		switch (ch){
 			case 'R':
 				f_recursive = 1;
 				break;
 			case 'f':
-				f_nosort = 1;
+				f_sort = 0;
 				/* FALLTHROUGH */
 			case 'a':
 				fts_options |= FTS_SEEDOT;	// Shows hidden directories
@@ -47,28 +52,43 @@ main(int argc, char *argv[])
 				exit(EXIT_FAILURE);
 		}
 	}
-	argc -= optind;
-	argv += optind;
-
-	if (argc == 0){
-		argv[0] = dot;
-	}
 
 	/* -A is always set for the superuser */
 	if (getuid() == 0){
 		f_listdot = 1;
 	}
 
+	/* Skip past the flag arguments */
+	argc -= optind;
+	argv += optind;
+
+	if (argc == 0){
+		fts_args = default_argv;
+	} else {
+		fts_args = argv;
+	}
+
+	/* Select appropriate sorting comparison */
+	if (f_sort == 0)
+		cmp = NULL;
+	else
+		cmp = compare;
+
 	/* Open FTS on the provided path */
-	ftsp = fts_open(argv, fts_options | FTS_NOCHDIR, NULL);
-	if (ftsp == NULL){
-		perror("fts_open");
-		exit(EXIT_FAILURE);
+	if ((ftsp = fts_open(fts_args, fts_options, cmp)) == NULL){
+			perror("fts_open");
+			exit(EXIT_FAILURE);
 	}
 	
 	/* Traverse through the fts tree abstraction */
-	while ((p = fts_read(ftsp)) != NULL)						// Begins with the target of ls
+	while ((p = fts_read(ftsp)) != NULL){						// Begins with the target of ls
 		switch (p->fts_info){
+			case FTS_DNR:
+			case FTS_ERR:
+				warn("%s: %s", p->fts_path, strerror(p->fts_errno));
+				break;
+
+			/* When p points to a directory FTSENT struct */
 			case FTS_D:
 				/* Skip '.' prefix files when -a or -A are set */
 				if (p->fts_level != FTS_ROOTLEVEL &&
@@ -77,8 +97,13 @@ main(int argc, char *argv[])
 						(void)fts_set(ftsp, p, FTS_SKIP);
 						break;
 					}
-				//Print directory header
-				printf("%s :\n", p->fts_path);
+
+				if (p->fts_info == FTS_ERR)
+    				warn("%s: %s", p->fts_path, strerror(p->fts_errno));
+
+				/* Print directory header */
+				if (p->fts_level != FTS_ROOTLEVEL)
+					printf("%s:\n", p->fts_path);
 				child = fts_children(ftsp, 0);
 				if (child == NULL){
 					warn("%s", p->fts_path);
@@ -90,16 +115,15 @@ main(int argc, char *argv[])
 					if (f_listdot == 0 && c->fts_name[0] == '.'){
 						continue;
 					}
-					printf("	%s\n", c->fts_name);
+					printf("%s\n", c->fts_name);
 				}
 				if (f_recursive == 0){
 					fts_set(ftsp, p, FTS_SKIP);
 					break;
 				}
 		}
-	if (f_nosort){
-		printf("lemons\n");
-	}	
+	}
+
 	fts_close(ftsp);
 	exit(EXIT_SUCCESS);
 }
