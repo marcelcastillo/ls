@@ -1,7 +1,7 @@
 # ls.c Makefile
 
 PROG = ls
-OBJS = cmp.o ls.o
+OBJS = cmp.o print.o ls.o
 CFLAGS = -Wall -Werror -Wextra -g
 
 all: ${PROG}

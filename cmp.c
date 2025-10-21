@@ -1,6 +1,6 @@
+/* Marcel Castillo */
 /* cmp.c */
 
-#include <string.h>
 
 #include "cmp.h"
 
