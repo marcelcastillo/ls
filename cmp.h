@@ -1,6 +1,6 @@
 /* cmp.h */
-#ifndef PRINT_H
-#define PRINT_H
+#ifndef CMP_H
+#define CMP_H
 
 #include <sys/types.h>
 
@@ -10,6 +10,6 @@
 
 int compare(const FTSENT **a, const FTSENT **b);
 
-#endif /* PRINT_H */
+#endif /* CMP_H */
 
 
