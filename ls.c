@@ -21,25 +21,27 @@ int
 main(int argc, char *argv[])
 {
     FTS     *ftsp;
-    FTSENT  *p;
+    FTSENT  *dir;
     FTSENT  *child; 
     int ch;
     int fts_options;
+    int longform =  0;
     int listdot =   0;  
     int sort =      1;          // Sort by default
     int recursive =     0;
     char ** fts_args;
     char *default_argv[] = {".", '\0'};
     int (*cmp)(const FTSENT **, const FTSENT **);
-    int (*printfun)(const FTSENT *ft);
+    //int (*printfun)(const FTSENT *ft);
     
     fts_options = FTS_PHYSICAL;     // Option bit-mask, start by not following symbolic links
-    printfun = regprint;            // Default printf printing
+    //printfun = regprint;            // Default printf printing
 
     while ((ch = getopt(argc, argv, "-AacdFfhiklnqRrSstuw")) != -1){
         switch (ch){
             case 'l':
-                printfun = ft_print;
+                longform = 1;
+                //printfun = ft_print;
                 break;
             case 'R':
                 recursive = 1;
@@ -89,47 +91,70 @@ main(int argc, char *argv[])
     }
     
     /* Traverse through the fts tree abstraction. Returns a pointer to the FTSENT
-     * struct describing one of the files in the file heirarchy*/
-    while ((p = fts_read(ftsp)) != NULL){   // Begins with the target of ls
-        switch (p->fts_info){
+     * struct describing one of the files in the file heirarchy */
+    while ((dir = fts_read(ftsp)) != NULL){   // Begins with the target of ls
+        switch (dir->fts_info){
             case FTS_DNR:
             case FTS_ERR:
-                warn("FTS_ERR %s: %s", p->fts_path, strerror(p->fts_errno));
+                warn("FTS_ERR %s: %s", dir->fts_path, strerror(dir->fts_errno));
                 break;
 
             /* When p points to a directory FTSENT struct */
             case FTS_D:
                 /* Skip '.' prefix files when -a or -A are set */
-                if (p->fts_level != 0 &&
-                    p->fts_name[0] == '.'
-                    && listdot == 0)
-                    {
-                        (void)fts_set(ftsp, p, FTS_SKIP);
+                if (dir->fts_level != 0 &&
+                    dir->fts_name[0] == '.'
+                    && listdot == 0){
+                        (void)fts_set(ftsp, dir, FTS_SKIP);
                         break;
-                    }
+                }
 
-                if (p->fts_info == FTS_ERR)
-                    warn("%s: %s", p->fts_path, strerror(p->fts_errno));
+                if (dir->fts_info == FTS_ERR)
+                    warn("%s: %s", dir->fts_path, strerror(dir->fts_errno));
 
                 /* Print directory header */
-                if (p->fts_level != FTS_ROOTLEVEL)
-                    printf("%s:\n", p->fts_path);
+                if (dir->fts_level != FTS_ROOTLEVEL)
+                    printf("%s:\n", dir->fts_path);
+                
+                
                 child = fts_children(ftsp, 0);
+
                 if (child == NULL){
-                    warn("No Children: %s", p->fts_path);
+                    warn("No Children: %s", dir->fts_path);
                     continue;
                 }
-                /* Print children */
-                /* If operating regularly (non -a or -A), hide hiddens */
-                for (FTSENT *c = child; c != NULL; c = c->fts_link){
-                    if (listdot == 0 && c->fts_name[0] == '.'){
-                        continue;
+
+                /* If -l flag is provided, format the printing appropriately */
+                if (longform == 1){
+
+                    struct maxwidths w = ft_widths(child);
+                    
+                    for (FTSENT *c = child; c != NULL; c = c->fts_link){
+
+                        /* If operating regularly (non -a or -A), hide hiddens */
+                        if (listdot == 0 && c->fts_name[0] == '.'){
+                            continue;
+                        }
+
+                        (void)ft_print(c, &w);
+                     }
+
+                } else {
+                    /* Print children */
+                    for (FTSENT *c = child; c != NULL; c = c->fts_link){
+
+                        /* If operating regularly (non -a or -A), hide hiddens */
+                        if (listdot == 0 && c->fts_name[0] == '.'){
+                            continue;
+                        }
+                        /* Call the relevant print function (Decided by flags) */
+                        regprint(c);
                     }
-                    // printf("%s\n", c->fts_name);
-                    printfun(c);
                 }
+
+
                 if (recursive == 0){
-                    fts_set(ftsp, p, FTS_SKIP);
+                    fts_set(ftsp, dir, FTS_SKIP);
                     break;
                 }
         }

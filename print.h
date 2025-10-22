@@ -16,8 +16,18 @@
 #include <time.h>
 #include <unistd.h>
 
-char *suffix(const struct stat *st, const char *path);
-int ft_print(const FTSENT* ft);
-int regprint(const FTSENT* ft);
+struct maxwidths{
+    int max_links;
+    int max_sizlen;
+    int max_usrlen;
+    int max_grplen;
+};
+
+struct maxwidths ft_widths(FTSENT* head_ft);
+char *suffix(struct stat *st, char *path);
+int ft_print(FTSENT* ft, struct maxwidths *w);
+int regprint(FTSENT* ft);
+
+
 
 #endif /* PRINT_H */
