@@ -61,8 +61,8 @@ ft_widths(FTSENT* child)
 }
 
 /* Stat style file-type suffix */
-char *
-suffix(struct stat *st, char *path) 
+int
+suffix(struct stat *st, char *path, char *suf) 
 {
     ssize_t         len;
     static char     buf[PATH_MAX];
@@ -71,12 +71,12 @@ suffix(struct stat *st, char *path)
     if  (S_ISLNK(st->st_mode)){
         if  ((len = readlink(path, target, sizeof(target) - 1)) != -1){
             target[len] = '\0';
-            snprintf(buf, sizeof(buf), " -> %s", target);
+            snprintf(suf, sizeof(buf), " -> %s", target);
         } else {
             buf[0] = '\0';
         }
     } 
-    return buf;
+    return 0;
 }
 
 /* Stat-like printing function for handling -l flag */
@@ -87,12 +87,13 @@ ft_print(FTSENT* ft, struct maxwidths *w)
     struct group        *gr;
     struct passwd       *pw;
     struct tm           *tm;
-    char                timebuf[64];    /* Conservative choice for time buffer */
-    char                uid[12];
+    char                timebuf[64];            /* Conservative choice for time buffer */
+    char                uid[12];                /* Conservative choice for username id length */
     char                gid[12];
-    char                modebuf[12];        /* Length of mode characters */
-    char                suf[PATH_MAX];
-
+    char                modebuf[12];            /* Length of mode characters */
+    char                suf[PATH_MAX] = "";    
+    char                path[PATH_MAX];         /* Path to file in question */
+    char                safename[PATH_MAX];     /* For printing unprintables */
 
     strmode(st->st_mode, modebuf);
     pw = getpwuid(st->st_uid);
@@ -101,16 +102,22 @@ ft_print(FTSENT* ft, struct maxwidths *w)
     snprintf(gid, sizeof(gid), "%u", st->st_gid);
     tm = localtime(&st->st_mtime);
     strftime(timebuf, sizeof(timebuf), "%b %e %H:%M %Y", tm);
-    snprintf(suf, sizeof(suf), "%s", suffix(st, ft->fts_accpath)); //TODO: Handle the readlink not working
-    //printf("%s\n", ft->fts_accpath);
+
+    /* Build the path out of the data in the ft_sent struct */
+    snprintf(path, sizeof(path), "%s/", ft->fts_path);
+    strlcat(path, ft->fts_name, sizeof(path));
+    suffix(st, path, suf);                           //TODO: Handle the readlink not working
+    unprintable(ft->fts_name, safename);
+
+    /* Formatted print */
     printf("%s %*lu %-*s  %-*s  %*lld %s %s%s\n", 
         modebuf,
         w->max_links, (unsigned long)st->st_nlink,
-        w->max_usrlen, pw ? pw->pw_name : uid,
+        w->max_usrlen, pw ? pw->pw_name : uid,       /* Print uid if the get*id functions found no match */
         w->max_grplen, gr ? gr->gr_name : gid,
         w->max_sizlen, (long long)st->st_size,
         timebuf,
-        ft->fts_name,
+        safename,
         suf
     );
 
@@ -121,5 +128,23 @@ ft_print(FTSENT* ft, struct maxwidths *w)
 int
 regprint(FTSENT* ft){
     printf("%s\n", ft->fts_name);
+    return 0;
+}
+
+/* Helper to print non-printables */
+int
+unprintable(char* name, char* safename)
+{
+    int len = strlen(name);
+
+    for (int i = 0; i < len; i++){
+        char c = name[i];
+        if (isprint(c)){
+            safename[i] = c;
+        } else{
+            safename[i] = '?';
+        }
+    }
+    safename[len] = '\0';
     return 0;
 }

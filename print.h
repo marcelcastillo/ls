@@ -6,6 +6,7 @@
 
 #include <sys/stat.h>
 
+#include <ctype.h>
 #include <fts.h>
 #include <grp.h>
 #include <limits.h>
@@ -24,9 +25,10 @@ struct maxwidths{
 };
 
 struct maxwidths ft_widths(FTSENT* head_ft);
-char *suffix(struct stat *st, char *path);
+int suffix(struct stat *st, char *path, char *suf);
 int ft_print(FTSENT* ft, struct maxwidths *w);
 int regprint(FTSENT* ft);
+int unprintable(char* name, char* safename);
 
 
 
