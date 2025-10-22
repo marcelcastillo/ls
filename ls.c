@@ -89,11 +89,24 @@ main(int argc, char *argv[])
             perror("fts_open");
             exit(EXIT_FAILURE);
     }
-    
-    /* Traverse through the fts tree abstraction. Returns a pointer to the FTSENT
+  
+    /* Traverse through the fts tree abstraction. fts_read returns a pointer to the FTSENT
      * struct describing one of the files in the file heirarchy */
     while ((dir = fts_read(ftsp)) != NULL){   // Begins with the target of ls
         switch (dir->fts_info){
+            case FTS_F:
+                /* Only print files here that were provided as program arguments */
+                if (dir->fts_level == FTS_ROOTLEVEL){
+                    if (longform == 1){
+                        struct maxwidths w = ft_widths(dir);
+                        (void)ft_print(dir, &w);
+                    } else {
+                        regprint(dir);
+                    }
+                printf("\n");
+                }
+                break;
+ 
             case FTS_DNR:
             case FTS_ERR:
                 warn("FTS_ERR %s: %s", dir->fts_path, strerror(dir->fts_errno));
@@ -113,14 +126,14 @@ main(int argc, char *argv[])
                     warn("%s: %s", dir->fts_path, strerror(dir->fts_errno));
 
                 /* Print directory header */
-                if (dir->fts_level != FTS_ROOTLEVEL)
+                if (dir->fts_level != FTS_ROOTLEVEL || argc > 1)
                     printf("%s:\n", dir->fts_path);
                 
                 
                 child = fts_children(ftsp, 0);
 
                 if (child == NULL){
-                    warn("No Children: %s", dir->fts_path);
+                    printf("\n");
                     continue;
                 }
 
@@ -151,12 +164,12 @@ main(int argc, char *argv[])
                         regprint(c);
                     }
                 }
-
-
+      
                 if (recursive == 0){
                     fts_set(ftsp, dir, FTS_SKIP);
-                    break;
                 }
+                printf("\n");
+                break;
         }
     }
 
