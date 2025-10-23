@@ -17,14 +17,19 @@
 #include "cmp.h"
 #include "print.h"
 
+
+
 int
 main(int argc, char *argv[])
 {
     FTS     *ftsp;
     FTSENT  *dir;
-    FTSENT  *child; 
+    FTSENT  *child;
     int ch;
     int fts_options;
+    int dashf =     0;
+    int dashl =     0;
+    int listdirs =  0;
     int longform =  0;
     int listdot =   0;  
     int sort =      1;          // Sort by default
@@ -32,16 +37,23 @@ main(int argc, char *argv[])
     char ** fts_args;
     char *default_argv[] = {".", '\0'};
     int (*cmp)(const FTSENT **, const FTSENT **);
-    //int (*printfun)(const FTSENT *ft);
+    struct pflags pf;
+
     
     fts_options = FTS_PHYSICAL;     // Option bit-mask, start by not following symbolic links
-    //printfun = regprint;            // Default printf printing
 
     while ((ch = getopt(argc, argv, "-AacdFfhiklnqRrSstuw")) != -1){
         switch (ch){
+            case 'd':
+                recursive = 0;
+                listdirs = 1;
+                break;
+            case 'F':
+                dashf = 1;
+                break;
             case 'l':
                 longform = 1;
-                //printfun = ft_print;
+                dashl = 1;
                 break;
             case 'R':
                 recursive = 1;
@@ -61,6 +73,9 @@ main(int argc, char *argv[])
                 exit(EXIT_FAILURE);
         }
     }
+
+    pf.dashf = dashf;
+    pf.dashl = dashl;
 
     /* -A is always set for the superuser */
     if (getuid() == 0){
@@ -97,13 +112,7 @@ main(int argc, char *argv[])
             case FTS_F:
                 /* Only print files here that were provided as program arguments */
                 if (dir->fts_level == FTS_ROOTLEVEL){
-                    if (longform == 1){
-                        struct maxwidths w = ft_widths(dir);
-                        (void)ft_print(dir, &w);
-                    } else {
-                        regprint(dir);
-                    }
-                printf("\n");
+                    callprint(dir, longform, &pf);
                 }
                 break;
  
@@ -128,48 +137,45 @@ main(int argc, char *argv[])
                 /* Print directory header */
                 if (dir->fts_level != FTS_ROOTLEVEL || argc > 1)
                     printf("%s:\n", dir->fts_path);
-                
-                
-                child = fts_children(ftsp, 0);
 
-                if (child == NULL){
+                /* -d flag */
+                if (listdirs){
+                    callprint(dir, longform, &pf);
+                    break;
+                }
+               
+                /* Get the fts linked list of children of the current directory */
+                if ((child = fts_children(ftsp, 0)) == NULL){
                     printf("\n");
                     continue;
                 }
 
-                /* If -l flag is provided, format the printing appropriately */
+                /* If -l stat() style printing */
                 if (longform == 1){
-
                     struct maxwidths w = ft_widths(child);
-                    
                     for (FTSENT *c = child; c != NULL; c = c->fts_link){
-
                         /* If operating regularly (non -a or -A), hide hiddens */
                         if (listdot == 0 && c->fts_name[0] == '.'){
                             continue;
                         }
-
-                        (void)ft_print(c, &w);
+                        (void)ft_print(c, &w, &pf);
                      }
 
+                /* Regular printing */
                 } else {
-                    /* Print children */
                     for (FTSENT *c = child; c != NULL; c = c->fts_link){
 
                         /* If operating regularly (non -a or -A), hide hiddens */
                         if (listdot == 0 && c->fts_name[0] == '.'){
                             continue;
                         }
-                        /* Call the relevant print function (Decided by flags) */
-                        regprint(c);
+                        regprint(c, &pf);
                     }
                 }
-      
-                if (recursive == 0){
-                    fts_set(ftsp, dir, FTS_SKIP);
-                }
                 printf("\n");
-                break;
+        } 
+        if (recursive == 0){
+            fts_set(ftsp, dir, FTS_SKIP);
         }
     }
 

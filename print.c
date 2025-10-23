@@ -62,26 +62,48 @@ ft_widths(FTSENT* child)
 
 /* Stat style file-type suffix */
 int
-suffix(struct stat *st, char *path, char *suf) 
+suffix(struct stat *st, char *path, char *suf, struct pflags *pf) 
 {
     ssize_t         len;
-    static char     buf[PATH_MAX];
     char            target[PATH_MAX - 4];
+    
+    if (pf->dashf){
+        switch (st->st_mode) {
+            case S_IFDIR:
+                strncpy(suf, "/", sizeof(char)*2);
+                break;
+            case S_IFLNK:
+                strncpy(suf, "@", sizeof(char)*2);
+                break;
+            case S_IFSOCK:
+                strncpy(suf, "=", sizeof(char)*2);
+                break;
+            case S_IFIFO:
+                strncpy(suf, "|", sizeof(char)*2);
+                break;
+            case S_IFWHT:
+                strncpy(suf, "%", sizeof(char)*2);
+                break;
+            default:
+                if (st->st_mode & (S_IXUSR | S_IXGRP | S_IXOTH))
+                    strncpy(suf, "*", sizeof(char)*2);
+        }
+    }
 
-    if  (S_ISLNK(st->st_mode)){
+    if  ((S_ISLNK(st->st_mode)) && pf->dashl){
         if  ((len = readlink(path, target, sizeof(target) - 1)) != -1){
             target[len] = '\0';
-            snprintf(suf, sizeof(buf), " -> %s", target);
-        } else {
-            buf[0] = '\0';
+            strncat(suf, " -> ", 5 * sizeof(char));
+            strncat(suf, target, strlen(target));
         }
+
     } 
     return 0;
 }
 
 /* Stat-like printing function for handling -l flag */
 int 
-ft_print(FTSENT* ft, struct maxwidths *w) 
+ft_print(FTSENT* ft, struct maxwidths *w, struct pflags *pf) 
 {   
     struct stat         *st = ft->fts_statp;
     struct group        *gr;
@@ -106,7 +128,7 @@ ft_print(FTSENT* ft, struct maxwidths *w)
     /* Build the path out of the data in the ft_sent struct */
     snprintf(path, sizeof(path), "%s/", ft->fts_path);
     strlcat(path, ft->fts_name, sizeof(path));
-    suffix(st, path, suf);                           //TODO: Handle the readlink not working
+    suffix(st, path, suf, pf);                           
     unprintable(ft->fts_name, safename);
 
     /* Formatted print */
@@ -126,8 +148,15 @@ ft_print(FTSENT* ft, struct maxwidths *w)
 
 /* Normal, non-l printing */
 int
-regprint(FTSENT* ft){
-    printf("%s\n", ft->fts_name);
+regprint(FTSENT* ft, struct pflags *pf){
+    char    fname[PATH_MAX];
+    int     suf;
+
+    snprintf(fname, sizeof(fname), "%s/", ft->fts_name);
+    suf = strlen(fname);
+    suffix(ft->fts_statp, NULL, fname + suf, pf);  
+
+    printf("%s\n", fname);
     return 0;
 }
 
@@ -148,3 +177,18 @@ unprintable(char* name, char* safename)
     safename[len] = '\0';
     return 0;
 }
+
+/* Helper to call the correct printing method for single files/dirs */
+int
+callprint(FTSENT* ft, int longform, struct pflags *pf){
+    if (longform == 1){
+        struct maxwidths w = ft_widths(ft);
+        (void)ft_print(ft, &w, pf);
+    } else {
+        regprint(ft, pf);
+    }
+    return 0;
+
+}
+
+

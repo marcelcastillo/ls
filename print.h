@@ -24,11 +24,17 @@ struct maxwidths{
     int max_grplen;
 };
 
+struct pflags{
+    int dashf;
+    int dashl;
+};
+
 struct maxwidths ft_widths(FTSENT* head_ft);
-int suffix(struct stat *st, char *path, char *suf);
-int ft_print(FTSENT* ft, struct maxwidths *w);
-int regprint(FTSENT* ft);
+int suffix(struct stat *st, char *path, char *suf, struct pflags *pf);
+int ft_print(FTSENT* ft, struct maxwidths *w, struct pflags *pf);
+int regprint(FTSENT* ft, struct pflags *pf);
 int unprintable(char* name, char* safename);
+int callprint(FTSENT* ft, int longform, struct pflags *pf);
 
 
 
