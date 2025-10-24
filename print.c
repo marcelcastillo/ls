@@ -60,7 +60,31 @@ ft_widths(FTSENT* child)
     return w;
 }
 
-/* Stat style file-type suffix */
+/* For handling i, s flags */
+int
+prefix(struct stat *st, char *pre, struct pflags *pf)
+{   
+    char    ino[24];
+    char    blocks[24];    /* Conservative size for prefix buffer */
+    char    buf[PATH_MAX];
+
+    if (pf->dashi){
+        snprintf(ino, sizeof(buf), "%lu", st->st_ino);
+        strncat(pre, ino, strlen(ino));
+    }
+    if (pf->dashs){
+        snprintf(blocks, sizeof(buf), "%5lu", st->st_blocks);
+        strncat(pre, blocks, strlen(blocks));
+    }
+    if (pf->dashi || pf->dashs){
+        strncat(pre, " ", sizeof(char)*2);
+    }
+
+    return 0;
+}
+
+
+/* For handling F flags and presenting symlinks */
 int
 suffix(struct stat *st, char *path, char *suf, struct pflags *pf) 
 {
@@ -68,7 +92,7 @@ suffix(struct stat *st, char *path, char *suf, struct pflags *pf)
     char            target[PATH_MAX - 4];
     
     if (pf->dashf){
-        switch (st->st_mode) {
+        switch (st->st_mode & S_IFMT) {
             case S_IFDIR:
                 strncpy(suf, "/", sizeof(char)*2);
                 break;
@@ -84,9 +108,9 @@ suffix(struct stat *st, char *path, char *suf, struct pflags *pf)
             case S_IFWHT:
                 strncpy(suf, "%", sizeof(char)*2);
                 break;
-            default:
-                if (st->st_mode & (S_IXUSR | S_IXGRP | S_IXOTH))
-                    strncpy(suf, "*", sizeof(char)*2);
+            case (S_IXUSR | S_IXGRP | S_IXOTH):
+                strncpy(suf, "*", sizeof(char)*2);
+                break;
         }
     }
 
@@ -113,6 +137,7 @@ ft_print(FTSENT* ft, struct maxwidths *w, struct pflags *pf)
     char                uid[12];                /* Conservative choice for username id length */
     char                gid[12];
     char                modebuf[12];            /* Length of mode characters */
+    char                pre[PATH_MAX] = "";
     char                suf[PATH_MAX] = "";    
     char                path[PATH_MAX];         /* Path to file in question */
     char                safename[PATH_MAX];     /* For printing unprintables */
@@ -126,13 +151,15 @@ ft_print(FTSENT* ft, struct maxwidths *w, struct pflags *pf)
     strftime(timebuf, sizeof(timebuf), "%b %e %H:%M %Y", tm);
 
     /* Build the path out of the data in the ft_sent struct */
+    prefix(st, pre, pf);
     snprintf(path, sizeof(path), "%s/", ft->fts_path);
     strlcat(path, ft->fts_name, sizeof(path));
     suffix(st, path, suf, pf);                           
     unprintable(ft->fts_name, safename);
 
     /* Formatted print */
-    printf("%s %*lu %-*s  %-*s  %*lld %s %s%s\n", 
+    printf("%s%s %*lu %-*s  %-*s  %*lld %s %s%s\n", 
+        pre,
         modebuf,
         w->max_links, (unsigned long)st->st_nlink,
         w->max_usrlen, pw ? pw->pw_name : uid,       /* Print uid if the get*id functions found no match */
@@ -148,15 +175,20 @@ ft_print(FTSENT* ft, struct maxwidths *w, struct pflags *pf)
 
 /* Normal, non-l printing */
 int
-regprint(FTSENT* ft, struct pflags *pf){
-    char    fname[PATH_MAX];
-    int     suf;
+regprint(FTSENT* ft, struct pflags *pf)
+{
+    struct stat     *st = ft->fts_statp;
+    char            pre[PATH_MAX] = "";
+    char            fname[PATH_MAX] = "";
+    int             suf;
 
-    snprintf(fname, sizeof(fname), "%s/", ft->fts_name);
+    
+    prefix(st, pre, pf);
+    unprintable((S_ISDIR(st->st_mode) && pf->dashd) ? ft->fts_path : ft->fts_name, fname);
     suf = strlen(fname);
-    suffix(ft->fts_statp, NULL, fname + suf, pf);  
+    suffix(st, NULL, fname + suf, pf);  
 
-    printf("%s\n", fname);
+    printf("%s%s\n", pre, fname);
     return 0;
 }
 

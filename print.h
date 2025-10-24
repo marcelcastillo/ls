@@ -25,8 +25,11 @@ struct maxwidths{
 };
 
 struct pflags{
+    int dashd;
     int dashf;
+    int dashi;
     int dashl;
+    int dashs;
 };
 
 struct maxwidths ft_widths(FTSENT* head_ft);

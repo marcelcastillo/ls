@@ -27,8 +27,11 @@ main(int argc, char *argv[])
     FTSENT  *child;
     int ch;
     int fts_options;
+    int dashd =     0;
     int dashf =     0;
     int dashl =     0;
+    int dashi =     0;
+    int dashs =     0;
     int listdirs =  0;
     int longform =  0;
     int listdot =   0;  
@@ -47,6 +50,13 @@ main(int argc, char *argv[])
             case 'd':
                 recursive = 0;
                 listdirs = 1;
+                dashd = 1;
+                break;
+            case 'i':
+                dashi = 1;
+                break;
+            case 's':
+                dashs = 1;
                 break;
             case 'F':
                 dashf = 1;
@@ -57,6 +67,7 @@ main(int argc, char *argv[])
                 break;
             case 'R':
                 recursive = 1;
+                dashd = 0;
                 break;
             case 'f':
                 sort = 0;
@@ -73,9 +84,12 @@ main(int argc, char *argv[])
                 exit(EXIT_FAILURE);
         }
     }
-
+    
+    pf.dashd = dashd;
     pf.dashf = dashf;
     pf.dashl = dashl;
+    pf.dashi = dashi;
+    pf.dashs = dashs;
 
     /* -A is always set for the superuser */
     if (getuid() == 0){
@@ -135,7 +149,7 @@ main(int argc, char *argv[])
                     warn("%s: %s", dir->fts_path, strerror(dir->fts_errno));
 
                 /* Print directory header */
-                if (dir->fts_level != FTS_ROOTLEVEL || argc > 1)
+                if ((dir->fts_level != FTS_ROOTLEVEL || argc > 1) && listdirs == 0)
                     printf("%s:\n", dir->fts_path);
 
                 /* -d flag */
