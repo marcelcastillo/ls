@@ -16,6 +16,7 @@
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
+#include <util.h>
 
 struct maxwidths{
     int max_links;
@@ -27,6 +28,7 @@ struct maxwidths{
 struct pflags{
     int dashd;
     int dashf;
+    int dashh;
     int dashi;
     int dashl;
     int dashs;
@@ -34,6 +36,7 @@ struct pflags{
 
 struct maxwidths ft_widths(FTSENT* head_ft);
 int suffix(struct stat *st, char *path, char *suf, struct pflags *pf);
+int human_readable_wrapper(char *buffer, int size, int number);
 int ft_print(FTSENT* ft, struct maxwidths *w, struct pflags *pf);
 int regprint(FTSENT* ft, struct pflags *pf);
 int unprintable(char* name, char* safename);

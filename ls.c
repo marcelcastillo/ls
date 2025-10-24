@@ -27,11 +27,12 @@ main(int argc, char *argv[])
     FTSENT  *child;
     int ch;
     int fts_options;
-    int dashd =     0;
-    int dashf =     0;
-    int dashl =     0;
-    int dashi =     0;
-    int dashs =     0;
+   // int dashd =     0;
+   // int dashh =     0;
+   // int dashf =     0;
+   // int dashl =     0;
+   // int dashi =     0;
+   // int dashs =     0;
     int listdirs =  0;
     int longform =  0;
     int listdot =   0;  
@@ -40,7 +41,7 @@ main(int argc, char *argv[])
     char ** fts_args;
     char *default_argv[] = {".", '\0'};
     int (*cmp)(const FTSENT **, const FTSENT **);
-    struct pflags pf;
+    struct pflags pf = {0};
 
     
     fts_options = FTS_PHYSICAL;     // Option bit-mask, start by not following symbolic links
@@ -50,24 +51,27 @@ main(int argc, char *argv[])
             case 'd':
                 recursive = 0;
                 listdirs = 1;
-                dashd = 1;
+                pf.dashd = 1;
+                break;
+            case 'h':
+                pf.dashh = 1;
                 break;
             case 'i':
-                dashi = 1;
+                pf.dashi = 1;
                 break;
             case 's':
-                dashs = 1;
+                pf.dashs = 1;
                 break;
             case 'F':
-                dashf = 1;
+                pf.dashf = 1;
                 break;
             case 'l':
                 longform = 1;
-                dashl = 1;
+                pf.dashl = 1;
                 break;
             case 'R':
                 recursive = 1;
-                dashd = 0;
+                pf.dashd = 0;
                 break;
             case 'f':
                 sort = 0;
@@ -85,11 +89,12 @@ main(int argc, char *argv[])
         }
     }
     
-    pf.dashd = dashd;
-    pf.dashf = dashf;
-    pf.dashl = dashl;
-    pf.dashi = dashi;
-    pf.dashs = dashs;
+   // pf.dashh = dashh;
+   // pf.dashd = dashd;
+   // pf.dashf = dashf;
+   // pf.dashl = dashl;
+   // pf.dashi = dashi;
+   // pf.dashs = dashs;
 
     /* -A is always set for the superuser */
     if (getuid() == 0){

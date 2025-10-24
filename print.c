@@ -60,27 +60,39 @@ ft_widths(FTSENT* child)
     return w;
 }
 
-/* For handling i, s flags */
+/* For handling i, s(h) flags */
 int
 prefix(struct stat *st, char *pre, struct pflags *pf)
 {   
     char    ino[24];
-    char    blocks[24];    /* Conservative size for prefix buffer */
-    char    buf[PATH_MAX];
+    char    blocks[24];         /* Conservative size for prefix buffer */
+    char    human_readable[5];  /* So that human_readable selects appropriate unit values */
+    //char    buf[PATH_MAX];
 
     if (pf->dashi){
-        snprintf(ino, sizeof(buf), "%lu", st->st_ino);
+        snprintf(ino, sizeof(ino), "%lu", st->st_ino);
         strncat(pre, ino, strlen(ino));
     }
     if (pf->dashs){
-        snprintf(blocks, sizeof(buf), "%5lu", st->st_blocks);
-        strncat(pre, blocks, strlen(blocks));
+        if (pf->dashh){
+            human_readable_wrapper(human_readable, sizeof(human_readable), st->st_blocks * 512);
+            snprintf(blocks, sizeof(blocks), "%5s", human_readable);
+        } else {
+            snprintf(blocks, sizeof(blocks), "%5lu", st->st_blocks);
+        }
+        strncat(pre, blocks, strlen(blocks));   //TODO Implement environment blocksize
     }
     if (pf->dashi || pf->dashs){
         strncat(pre, " ", sizeof(char)*2);
     }
 
     return 0;
+}
+
+int
+human_readable_wrapper(char *buffer, int size, int number)
+{
+    return humanize_number(buffer, size, number, "", HN_AUTOSCALE, HN_B | HN_NOSPACE | HN_DECIMAL);
 }
 
 
@@ -133,6 +145,8 @@ ft_print(FTSENT* ft, struct maxwidths *w, struct pflags *pf)
     struct group        *gr;
     struct passwd       *pw;
     struct tm           *tm;
+    int                 digitspaces;
+    char                sizeval[24];
     char                timebuf[64];            /* Conservative choice for time buffer */
     char                uid[12];                /* Conservative choice for username id length */
     char                gid[12];
@@ -157,14 +171,24 @@ ft_print(FTSENT* ft, struct maxwidths *w, struct pflags *pf)
     suffix(st, path, suf, pf);                           
     unprintable(ft->fts_name, safename);
 
+    /* Format number to return for size */
+    if (pf->dashh){
+        digitspaces = 5;
+        human_readable_wrapper(sizeval, digitspaces, (long long)st->st_size);
+    } else {
+        digitspaces = w->max_sizlen;
+        snprintf(sizeval, sizeof(sizeval), "%lld", (long long)st->st_size);
+    }
+
+
     /* Formatted print */
-    printf("%s%s %*lu %-*s  %-*s  %*lld %s %s%s\n", 
+    printf("%s%s %*lu %-*s  %-*s  %*s %s %s%s\n", 
         pre,
         modebuf,
         w->max_links, (unsigned long)st->st_nlink,
         w->max_usrlen, pw ? pw->pw_name : uid,       /* Print uid if the get*id functions found no match */
         w->max_grplen, gr ? gr->gr_name : gid,
-        w->max_sizlen, (long long)st->st_size,
+        digitspaces, sizeval,
         timebuf,
         safename,
         suf
