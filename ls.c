@@ -66,6 +66,8 @@ main(int argc, char *argv[])
                 break;
             case 'n':
                 pf.dashn = 1;
+                longform = 1;
+                pf.dashl = 1;
                 break;
             case 'R':
                 recursive = 1;
@@ -149,6 +151,7 @@ main(int argc, char *argv[])
                 if ((dir->fts_level != FTS_ROOTLEVEL || argc > 1) && listdirs == 0)
                     printf("%s:\n", dir->fts_path);
 
+
                 /* -d flag */
                 if (listdirs){
                     callprint(dir, longform, &pf);
@@ -164,6 +167,11 @@ main(int argc, char *argv[])
                 /* If -l stat() style printing */
                 if (longform == 1){
                     struct maxwidths w = ft_widths(child);
+
+                    /* Total count for -l */
+                    printf("total %ld\n", w.totalblocks);
+
+
                     for (FTSENT *c = child; c != NULL; c = c->fts_link){
                         /* If operating regularly (non -a or -A), hide hiddens */
                         if (listdot == 0 && c->fts_name[0] == '.'){

@@ -14,7 +14,7 @@ struct maxwidths
 ft_widths(FTSENT* child)
 {
     /* Initialize the width struct to 10 */
-    struct maxwidths w = {1, 1, 1, 1};
+    struct maxwidths w = {1, 1, 1, 1, 0};
     int len_links;
     int len_size;
     int len_uname;
@@ -25,6 +25,8 @@ ft_widths(FTSENT* child)
     for (FTSENT *c = child; c != NULL; c = c->fts_link){
 
         struct stat *st = c->fts_statp;
+
+        w.totalblocks += st->st_blocks;
        
         /* Find the length of the longest string necessary to print link count and file sizes */
         len_links = snprintf(NULL, 0, "%lld", (long long)st->st_nlink);
@@ -186,7 +188,8 @@ ft_print(FTSENT* ft, struct maxwidths *w, struct pflags *pf)
         pre,
         modebuf,
         w->max_links, (unsigned long)st->st_nlink,
-        w->max_usrlen, (pw && !pf->dashn) ? pw->pw_name : uid,       /* Print uid if the get*id functions found no match */
+        /* Print uid if the get*id functions found no match, or dashn */
+        w->max_usrlen, (pw && !pf->dashn) ? pw->pw_name : uid,       
         w->max_grplen, (gr && !pf->dashn) ? gr->gr_name : gid,
         digitspaces, sizeval,
         timebuf,

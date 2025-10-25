@@ -23,6 +23,7 @@ struct maxwidths{
     int max_sizlen;
     int max_usrlen;
     int max_grplen;
+    long  totalblocks;
 };
 
 struct pflags{
