@@ -166,10 +166,10 @@ main(int argc, char *argv[])
 
                 /* If -l stat() style printing */
                 if (longform == 1){
-                    struct maxwidths w = ft_widths(child);
+                    struct maxwidths w = ft_widths(child, &pf);
 
                     /* Total count for -l */
-                    printf("total %ld\n", w.totalblocks);
+                    printf("total %s\n", w.l_total);
 
 
                     for (FTSENT *c = child; c != NULL; c = c->fts_link){

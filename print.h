@@ -23,7 +23,7 @@ struct maxwidths{
     int max_sizlen;
     int max_usrlen;
     int max_grplen;
-    long  totalblocks;
+    char l_total[32];
 };
 
 struct pflags{
@@ -36,7 +36,7 @@ struct pflags{
     int dashs;
 };
 
-struct maxwidths ft_widths(FTSENT* head_ft);
+struct maxwidths ft_widths(FTSENT* head_ft, struct pflags *pf);
 int suffix(struct stat *st, char *path, char *suf, struct pflags *pf);
 int human_readable_wrapper(char *buffer, int size, int number);
 int ft_print(FTSENT* ft, struct maxwidths *w, struct pflags *pf);

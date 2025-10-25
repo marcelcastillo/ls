@@ -11,14 +11,17 @@
 
 /* Scan through the child fts_stat structs for max values */
 struct maxwidths
-ft_widths(FTSENT* child)
+ft_widths(FTSENT* child, struct pflags *pf)
 {
     /* Initialize the width struct to 10 */
-    struct maxwidths w = {1, 1, 1, 1, 0};
+    struct maxwidths w = {1, 1, 1, 1, ""};
     int len_links;
     int len_size;
     int len_uname;
     int len_gname;
+    long totalblocks = 0;
+    long long totalsize = 0;
+    char human_read_buf[32];
     struct passwd *pw;
     struct group *gr;
 
@@ -26,7 +29,8 @@ ft_widths(FTSENT* child)
 
         struct stat *st = c->fts_statp;
 
-        w.totalblocks += st->st_blocks;
+        totalblocks += st->st_blocks;
+        totalsize += st->st_size;
        
         /* Find the length of the longest string necessary to print link count and file sizes */
         len_links = snprintf(NULL, 0, "%lld", (long long)st->st_nlink);
@@ -58,6 +62,14 @@ ft_widths(FTSENT* child)
             w.max_grplen = len_gname;
 
     }
+
+    if (pf->dashh){
+        human_readable_wrapper(human_read_buf, sizeof(char)*5, totalsize);
+
+    } else {
+        snprintf(human_read_buf, sizeof(human_read_buf), "%lu", totalblocks);
+    }
+    strncpy(w.l_total, human_read_buf, sizeof(w.l_total));
 
     return w;
 }
@@ -241,7 +253,7 @@ unprintable(char* name, char* safename)
 int
 callprint(FTSENT* ft, int longform, struct pflags *pf){
     if (longform == 1){
-        struct maxwidths w = ft_widths(ft);
+        struct maxwidths w = ft_widths(ft, pf);
         (void)ft_print(ft, &w, pf);
     } else {
         regprint(ft, pf);
