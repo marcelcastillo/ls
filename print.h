@@ -31,6 +31,7 @@ struct pflags{
     int dashh;
     int dashi;
     int dashl;
+    int dashn;
     int dashs;
 };
 

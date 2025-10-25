@@ -186,8 +186,8 @@ ft_print(FTSENT* ft, struct maxwidths *w, struct pflags *pf)
         pre,
         modebuf,
         w->max_links, (unsigned long)st->st_nlink,
-        w->max_usrlen, pw ? pw->pw_name : uid,       /* Print uid if the get*id functions found no match */
-        w->max_grplen, gr ? gr->gr_name : gid,
+        w->max_usrlen, (pw && !pf->dashn) ? pw->pw_name : uid,       /* Print uid if the get*id functions found no match */
+        w->max_grplen, (gr && !pf->dashn) ? gr->gr_name : gid,
         digitspaces, sizeval,
         timebuf,
         safename,

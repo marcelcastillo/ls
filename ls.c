@@ -27,12 +27,6 @@ main(int argc, char *argv[])
     FTSENT  *child;
     int ch;
     int fts_options;
-   // int dashd =     0;
-   // int dashh =     0;
-   // int dashf =     0;
-   // int dashl =     0;
-   // int dashi =     0;
-   // int dashs =     0;
     int listdirs =  0;
     int longform =  0;
     int listdot =   0;  
@@ -68,6 +62,10 @@ main(int argc, char *argv[])
             case 'l':
                 longform = 1;
                 pf.dashl = 1;
+                pf.dashn = 0;
+                break;
+            case 'n':
+                pf.dashn = 1;
                 break;
             case 'R':
                 recursive = 1;
@@ -89,12 +87,6 @@ main(int argc, char *argv[])
         }
     }
     
-   // pf.dashh = dashh;
-   // pf.dashd = dashd;
-   // pf.dashf = dashf;
-   // pf.dashl = dashl;
-   // pf.dashi = dashi;
-   // pf.dashs = dashs;
 
     /* -A is always set for the superuser */
     if (getuid() == 0){
